@@ -55,8 +55,8 @@ class RoutesTableViewController: UITableViewController, RouteListSectionHeaderVi
     }
 
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        var detailViewController = segue.destinationViewController as RouteDetailsViewController
-        let indexPath = sender as NSIndexPath
+        var detailViewController = segue.destinationViewController as! RouteDetailsViewController
+        let indexPath = sender as! NSIndexPath
         let area = DataManager.sharedInstance.areas[indexPath.section]
         let route = DataManager.sharedInstance.routes[area.routeIds[indexPath.row]]
         
@@ -80,7 +80,7 @@ class RoutesTableViewController: UITableViewController, RouteListSectionHeaderVi
     }
     
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier("RouteListCellIdentifier", forIndexPath: indexPath) as RouteCellView
+        let cell = tableView.dequeueReusableCellWithIdentifier("RouteListCellIdentifier", forIndexPath: indexPath) as! RouteCellView
         
         // Configure the cell...
         let routeId = DataManager.sharedInstance.areas[indexPath.section].routeIds[indexPath.row]
@@ -100,7 +100,7 @@ class RoutesTableViewController: UITableViewController, RouteListSectionHeaderVi
     
     override func tableView(tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         
-        var sectionHeaderView = tableView.dequeueReusableHeaderFooterViewWithIdentifier(SectionHeaderViewIdentifier) as SectionHeaderView
+        var sectionHeaderView = tableView.dequeueReusableHeaderFooterViewWithIdentifier(SectionHeaderViewIdentifier) as! SectionHeaderView
         
         // set the section info
         sectionInfoArray[section].sectionHeaderView = sectionHeaderView

@@ -66,7 +66,7 @@ class DataManager {
             let routeId = row[routeIdCol]
             areaToRoutes.append((areaId, routeId))
         }
-        let routesForAreas = areaToRoutes.groupBy({$0.0}).map(
+        let routesForAreas = areaToRoutes.groupBy(groupingFunction: {$0.0}).map(
             { (key, values) -> (Int, [Int]) in
                 return (key, values.map({$0.1}))
         })
@@ -116,7 +116,7 @@ class DataManager {
     
     func writableDatabasePath() -> String {
         let paths = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)
-        let documentsDirectory = paths[0] as String
+        let documentsDirectory = paths[0] as! String
         let writableDBPath = documentsDirectory.stringByAppendingPathComponent("walks.db")
         return writableDBPath
     }
@@ -172,7 +172,11 @@ class DataManager {
             // println("inserted id: \(insertID)")
             
             // insert into the logEntriesTable, so the model and the database are in-sync
-            let entry = LogEntry(id: insertID, wildlifeId: wildlifeId, location: location, date: date, weather: weather, image: loadImage(imageFileName))
+            let entry = LogEntry(id: Int(insertID), wildlifeId: wildlifeId, location: location, date: date, weather: weather, image: loadImage(imageFileName))
+            
+            // let entry = LogEntry(id: Int, wildlifeId: Int, location: CLLocationCoordinate2D, date: NSDate, weather: String, image: UIImage)
+            
+            
             if var entryList = logEntriesTable[entry.wildlifeId] {
                 entryList.append(entry)
             } else {

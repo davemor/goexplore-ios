@@ -87,8 +87,8 @@ class WildlifeDetailViewController: UIViewController {
 
         if segue.identifier == "RouteDetailsSegue" {
         
-            let routeId = sender as Int
-            var routeDetailVC = segue.destinationViewController as RouteDetailsViewController
+            let routeId = sender as! Int
+            var routeDetailVC = segue.destinationViewController as! RouteDetailsViewController
             
             routeDetailVC.route = DataManager.sharedInstance.routes[routeId]
             let areaId = DataManager.sharedInstance.routes[routeId]?.primaryAreaId
@@ -98,7 +98,7 @@ class WildlifeDetailViewController: UIViewController {
                 routeDetailVC.area = DataManager.sharedInstance.areas[0]
             }
         } else if segue.identifier == "LogSightingSegue" {
-            var dest = segue.destinationViewController as NewLogEntryViewController
+            var dest = segue.destinationViewController as! NewLogEntryViewController
             dest.wildlife = wildlifeOpt
         }
     }

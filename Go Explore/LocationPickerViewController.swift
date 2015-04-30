@@ -42,9 +42,9 @@ class LocationPickerViewController: UIViewController {
     }
 
     @IBAction func useLocationButtonPressed(sender: UIButton) {
-        delegate?.setLocation(location)
+        delegate?.setALocation(location)
         if placemark != nil {
-            delegate?.setPlacemark(placemark!)
+            delegate?.setAPlacemark(placemark!)
         }
         self.navigationController?.popViewControllerAnimated(true)
     }
@@ -77,7 +77,7 @@ class LocationPickerViewController: UIViewController {
                 if (error != nil) {
                     //println("reverse geodcode fail: \(error.localizedDescription)")
                 }
-                let pm = placemarks as [CLPlacemark]
+                let pm = placemarks as! [CLPlacemark]
                 if pm.count > 0 {
                     // println(pm[0])
                     self.placemark = pm[0]
@@ -87,8 +87,8 @@ class LocationPickerViewController: UIViewController {
 }
 
 protocol LocationPickerDelegate {
-    func setLocation(location: CLLocationCoordinate2D)
-    func setPlacemark(placemark: CLPlacemark)
+    func setALocation(location: CLLocationCoordinate2D)
+    func setAPlacemark(placemark: CLPlacemark)
 }
 
 

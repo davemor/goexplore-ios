@@ -1,8 +1,6 @@
 BUILD_TOOL = xcodebuild
-BUILD_PLATFORM ?= Mac
-BUILD_ARGUMENTS = -scheme 'SQLite $(BUILD_PLATFORM)'
-
-XCPRETTY := $(shell command -v xcpretty)
+BUILD_SDK = macosx
+BUILD_ARGUMENTS = -scheme SQLite -sdk $(BUILD_SDK)
 
 default: test
 
@@ -10,11 +8,7 @@ build:
 	$(BUILD_TOOL) $(BUILD_ARGUMENTS)
 
 test:
-ifdef XCPRETTY
-	@set -o pipefail && $(BUILD_TOOL) $(BUILD_ARGUMENTS) test | $(XCPRETTY) -c
-else
 	$(BUILD_TOOL) $(BUILD_ARGUMENTS) test
-endif
 
 clean:
 	$(BUILD_TOOL) $(BUILD_ARGUMENTS) clean
@@ -24,5 +18,5 @@ repl:
 		swift -F '$(TMPDIR)/SQLite.swift/Build/Products/Debug'
 
 sloc:
-	@zsh -c "grep -vE '^ *//|^$$' SQLite\ Common/*.{swift,h,c} | wc -l"
+	@zsh -c "grep -vE '^ *//|^$$' SQLite/*.{swift,h,c} | wc -l"
 

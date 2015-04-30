@@ -75,8 +75,8 @@ struct Route {
             if topArray.count > 0 {
                 if let coordsArray = topArray[0] as? NSArray {
                     for coord in coordsArray {
-                        let lat = CLLocationDegrees(coord[1] as Double)
-                        let lng = CLLocationDegrees(coord[0] as Double)
+                        let lat = CLLocationDegrees(coord[1] as! Double)
+                        let lng = CLLocationDegrees(coord[0] as! Double)
                         let coordinate = CLLocationCoordinate2DMake(lat, lng)
                         let point = MKMapPointForCoordinate(coordinate)
                         coordinates.append(point)

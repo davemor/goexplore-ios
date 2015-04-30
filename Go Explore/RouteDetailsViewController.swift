@@ -81,8 +81,8 @@ class RouteDetailsViewController: UIViewController, MKMapViewDelegate {
     
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         if segue.identifier == "WildlifeDetailSegue" {
-            let wildlifeId = sender as Int
-            let destination = segue.destinationViewController as WildlifeDetailViewController
+            let wildlifeId = sender as! Int
+            let destination = segue.destinationViewController as! WildlifeDetailViewController
             destination.wildlifeOpt = DataManager.sharedInstance.wildlifeTable[wildlifeId]
         }
     }

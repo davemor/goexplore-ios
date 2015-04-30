@@ -1,6 +1,8 @@
 # SQLite.swift Documentation
 
   - [Installation](#installation)
+    - [SQLCipher](#sqlcipher)
+    - [Frameworkless Targets](#frameworkless-targets)
   - [Getting Started](#getting-started)
     - [Connecting to a Database](#connecting-to-a-database)
       - [Read-Write Databases](#read-write-databases)
@@ -49,6 +51,9 @@
   - [Other Operators](#other-operators)
   - [Core SQLite Functions](#core-sqlite-functions)
   - [Aggregate SQLite Functions](#aggregate-sqlite-functions)
+  - [Custom SQL Functions](#custom-sql-functions)
+  - [Custom Collations](#custom-collations)
+  - [Full-text Search](#full-text-search)
   - [Executing Arbitrary SQL](#executing-arbitrary-sql)
   - [Logging](#logging)
 
@@ -66,13 +71,47 @@ To install SQLite.swift as an Xcode sub-project:
 
     ![Installation](Resources/installation@2x.png)
 
- 2. In your target’s **Build Phases**, add **SQLite iOS** (or **SQLite Mac**) to the **Target Dependencies** build phase.
+ 2. In your target’s **Build Phases**, add **SQLite** to the **Target Dependencies** build phase.
 
- 3. Add the appropriate **SQLite.framework** product to the **Link Binary With Libraries** build phase.
+ 3. Add **SQLite.framework** to the **Link Binary With Libraries** build phase.
 
- 4. Add the same **SQLite.framework** to a **Copy Files** build phase with a **Frameworks** destination. (Add a new build phase if need be.)
+ 4. Add **SQLite.framework** to a **Copy Files** build phase with a **Frameworks** destination. (Add a new build phase if need be.)
 
 You should now be able to `import SQLite` from any of your target’s source files and begin using SQLite.swift.
+
+
+### SQLCipher
+
+To install SQLite.swift with [SQLCipher](http://sqlcipher.net) support:
+
+ 1. Make sure the **sqlcipher** working copy is checked out in Xcode. If **sqlcipher.xcodeproj** is unavailable (_i.e._, it appears red), go to the **Source Control** menu and select **Check Out sqlcipher…** from the **sqlcipher** menu item.
+
+ 2. Follow [the instructions above](#installation) with the **SQLiteCipher** target, instead.
+
+> _Note:_ By default, SQLCipher compiles [without support for full-text search](https://github.com/sqlcipher/sqlcipher/issues/102). If you intend to use [FTS4](#full-text-search), make sure you add the following to **Other C Flags** in the **Build Settings** of the **sqlcipher** target (in the **sqlcipher.xcodeproj** project):
+>
+>  - `-DSQLITE_ENABLE_FTS4`
+>  - `-DSQLITE_ENABLE_FTS3_PARENTHESIS`
+
+
+### Frameworkless Targets
+
+It’s possible to use SQLite.swift in a target that doesn’t support frameworks, including iOS 7 apps and OS X command line tools, though it takes a little extra work.
+
+ 1. In your target’s **Build Phases**, add **libsqlite3.dylib** to the **Link Binary With Libraries** build phase.
+
+ 2. Copy the SQLite.swift source files (from its **SQLite** directory) into your Xcode project.
+
+ 3. Remove `import sqlite3` (and `@import sqlite3;`) from the SQLite.swift source files that call it.
+
+ 4. Add the following lines to your project’s [bridging header](https://developer.apple.com/library/prerelease/ios/documentation/Swift/Conceptual/BuildingCocoaApps/MixandMatch.html#//apple_ref/doc/uid/TP40014216-CH10-XID_79) (a file usually in the form of `$(TARGET_NAME)-Bridging-Header.h`).
+
+    ``` swift
+    #import <sqlite3.h>
+    #import "SQLite-Bridging.h"
+    ```
+
+> _Note:_ Adding SQLite.swift source files directly to your application will both remove the `SQLite` module namespace (no need—or ability—to `import SQLite`) and expose internal functions and variables. You will need to rename anything that conflicts with code of your own. Please [report any bugs](https://github.com/stephencelis/SQLite.swift/issues/new) (_e.g._, segfaults) you encounter.
 
 
 ## Getting Started
@@ -100,7 +139,7 @@ On iOS, you can create a writable database in your app’s **Documents** directo
 ``` swift
 let path = NSSearchPathForDirectoriesInDomains(
     .DocumentDirectory, .UserDomainMask, true
-).first as String
+).first as! String
 
 let db = Database("\(path)/db.sqlite3")
 ```
@@ -110,9 +149,9 @@ On OS X, you can use your app’s **Application Support** directory:
 ``` swift
 var path = NSSearchPathForDirectoriesInDomains(
     .ApplicationSupportDirectory, .UserDomainMask, true
-).first as String + NSBundle.mainBundle().bundleIdentifier!
+).first as! String + NSBundle.mainBundle().bundleIdentifier!
 
-// create parent directory iff it doesn't exist
+// create parent directory iff it doesn’t exist
 NSFileManager.defaultManager().createDirectoryAtPath(
     path, withIntermediateDirectories: true, attributes: nil, error: nil
 )
@@ -123,7 +162,7 @@ let db = Database("\(path)/db.sqlite3")
 
 #### Read-Only Databases
 
-If you bundle a database with your app, you can establish a _read-only_ connection to it.
+If you bundle a database with your app (_i.e._, you’ve copied a database file into your Xcode project and added it to your application target), you can establish a _read-only_ connection to it.
 
 ``` swift
 let path = NSBundle.mainBundle().pathForResource("db", ofType: "sqlite3")!
@@ -162,16 +201,19 @@ SQLite.swift comes with a typed expression layer that directly maps [Swift types
 
 | Swift Type      | SQLite Type |
 | --------------- | ----------- |
-| `Int`           | `INTEGER`   |
+| `Int64`*        | `INTEGER`   |
 | `Double`        | `REAL`      |
 | `String`        | `TEXT`      |
-| `Bool`          | `BOOLEAN`   |
 | `nil`           | `NULL`      |
-| `SQLite.Blob`*  | `BLOB`      |
+| `SQLite.Blob`†  | `BLOB`      |
 
-> *SQLite.swift defines its own `Blob` structure, which safely wraps the underlying bytes.
+> *While `Int64` is the basic, raw type (to preserve 64-bit integers on 32-bit platforms), `Int` and `Bool` work transparently.
+>
+> †SQLite.swift defines its own `Blob` structure, which safely wraps the underlying bytes.
 >
 > See [Custom Types](#custom-types) for more information about extending other classes and structures to work with SQLite.swift.
+>
+> See [Executing Arbitrary SQL](#executing-arbitrary-sql) to forego the typed layer and execute raw SQL, instead.
 
 These expressions (in the form of the structure, [`Expression`](#expressions)) build on one another and, with a query ([`Query`](#queries)), can create and execute SQL statements.
 
@@ -181,7 +223,7 @@ These expressions (in the form of the structure, [`Expression`](#expressions)) b
 Expressions are generic structures associated with a type ([built-in](#building-type-safe-sql) or [custom](#custom-types)), raw SQL, and (optionally) values to bind to that SQL. Typically, you will only explicitly create expressions to describe your columns, and typically only once per column.
 
 ``` swift
-let id = Expression<Int>("id")
+let id = Expression<Int64>("id")
 let email = Expression<String>("email")
 let balance = Expression<Double>("balance")
 let verified = Expression<Bool>("verified")
@@ -198,7 +240,7 @@ let name = Expression<String?>("name")
 
 ### Compound Expressions
 
-Expressions can be combined with other expressions and types using [filters](#filter-operators-and-functions), and [other operators](#other-operators) and [functions](#core-sqlite-functions). These building blocks can create complex SQLite statements.
+Expressions can be combined with other expressions and types using [filter operators and functions](#filter-operators-and-functions) (as well as other [non-filter operators](#other-operators) and [functions](#core-sqlite-functions)). These building blocks can create complex SQLite statements.
 
 
 ### Queries
@@ -249,16 +291,21 @@ The `create(table:)` function has several default parameters we can override.
 
 The `column` function is used for a single column definition. It takes an [expression](#expressions) describing the column name and type, and accepts several parameters that map to various column constraints and clauses.
 
-  - `primaryKey` adds an `INTEGER PRIMARY KEY` constraint to a single column. (See the `primaryKey` function under [Table Constraints](#table-constraints) for non-integer primary keys).
+  - `primaryKey` adds a `PRIMARY KEY` constraint to a single column.
 
     ``` swift
     t.column(id, primaryKey: true)
     // "id" INTEGER PRIMARY KEY NOT NULL
+
+    t.column(id, primaryKey: .Autoincrement)
+    // "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
     ```
 
-    > _Note:_ The `primaryKey` parameter cannot be used alongside `defaultValue` or `references`. If you need to create a column that has a default value and is also a primary and/or foreign key, use the `primaryKey` and `foreignKey` functions mentioned under [Table Constraints](#table-constraints).
+    > _Note:_ The `primaryKey` parameter cannot be used alongside `references`. If you need to create a column that has a default value and is also a primary and/or foreign key, use the `primaryKey` and `foreignKey` functions mentioned under [Table Constraints](#table-constraints).
     >
-    > Primary keys cannot be optional (`Expression<Int?>`).
+    > Primary keys cannot be optional (_e.g._, `Expression<Int64?>`).
+    >
+    > Only an `INTEGER PRIMARY KEY` can take `.Autoincrement`.
 
   - `unique` adds a `UNIQUE` constraint to the column. (See the `unique` function under [Table Constraints](#table-constraints) for uniqueness over multiple columns).
 
@@ -286,11 +333,14 @@ The `column` function is used for a single column definition. It takes an [expre
   - `collate` adds a `COLLATE` clause to `Expression<String>` (and `Expression<String?>`) column definitions with [a collating sequence](https://www.sqlite.org/datatype3.html#collation) defined in the `Collation` enumeration.
 
     ``` swift
-    t.column(email, collate: .NoCase)
-    // "email" TEXT NOT NULL COLLATE NOCASE
+    t.column(email, collate: .Nocase)
+    // "email" TEXT NOT NULL COLLATE "NOCASE"
+
+    t.column(name, collate: .Rtrim)
+    // "name" TEXT COLLATE "RTRIM"
     ```
 
-  - `references` adds a `REFERENCES` clause to `Expression<Int>` (and `Expression<Int?>`) column definitions and accepts a table (`Query`) or namespaced column expression. (See the `foreignKey` function under [Table Constraints](#table-constraints) for non-integer foreign key support.)
+  - `references` adds a `REFERENCES` clause to `Expression<Int64>` (and `Expression<Int64?>`) column definitions and accepts a table (`Query`) or namespaced column expression. (See the `foreignKey` function under [Table Constraints](#table-constraints) for non-integer foreign key support.)
 
     ``` swift
     t.column(user_id, references: users[id])
@@ -329,14 +379,12 @@ Additional constraints may be provided outside the scope of a single column usin
     // CHECK ("balance" >= 0.0)
     ```
 
-  - `foreignKey` adds a `FOREIGN KEY` constraint to the table. Unlike [the `references` constraint, above](#column-constraints), it supports all SQLite types, and both [`ON UPDATE` and `ON DELETE` actions](https://www.sqlite.org/foreignkeys.html#fk_actions).
+  - `foreignKey` adds a `FOREIGN KEY` constraint to the table. Unlike [the `references` constraint, above](#column-constraints), it supports all SQLite types, and both [`ON UPDATE` and `ON DELETE` actions](https://www.sqlite.org/foreignkeys.html#fk_actions), and composite (multiple column) keys.
 
     ``` swift
     t.foreignKey(user_id, on: users[id], delete: .SetNull)
     // FOREIGN KEY("user_id") REFERENCES "users"("id") ON DELETE SET NULL
     ```
-
-    > _Note:_ Composite foreign keys are not supported at this time. If you add support, please [submit a pull request](https://github.com/stephencelis/SQLite.swift/fork).
 
 <!-- TODO
 ### Creating a Table from a Select Statement
@@ -354,43 +402,39 @@ users.insert(email <- "alice@mac.com", name <- "Alice")?
 
 The `insert` function can return several different types that are useful in different contexts.
 
-  - An `Int?` representing the inserted row’s [`ROWID`][ROWID] (or `nil` on failure), for simplicity.
+  - An `Int64?` representing the inserted row’s [`ROWID`][ROWID] (or `nil` on failure), for simplicity.
 
     ``` swift
-    if let insertID = users.insert(email <- "alice@mac.com") {
-        println("inserted id: \(insertID)")
+    if let insertId = users.insert(email <- "alice@mac.com") {
+        println("inserted id: \(insertId)")
     }
     ```
 
-    We can use the optional nature of the value to disambiguate with a simple `?` or `!`.
+    If a value is always expected, we can disambiguate with a `!`.
 
     ``` swift
-    // ignore failure
-    users.insert(email <- "alice@mac.com")?
-
-    // assertion on failure
     users.insert(email <- "alice@mac.com")!
     ```
 
   - A `Statement`, for [the transaction and savepoint helpers](#transactions-and-savepoints) that take a list of statements.
 
     ``` swift
-    db.transaction(
-        users.insert(email <- "alice@mac.com"),
-        users.insert(email <- "betty@mac.com")
-    )
+    db.transaction()
+        && users.insert(email <- "alice@mac.com")
+        && users.insert(email <- "betty@mac.com")
+        && db.commit() || db.rollback()
     // BEGIN DEFERRED TRANSACTION;
     // INSERT INTO "users" ("email") VALUES ('alice@mac.com');
     // INSERT INTO "users" ("email") VALUES ('betty@mac.com');
     // COMMIT TRANSACTION;
     ```
 
-  - A tuple of the above [`ROWID`][ROWID] and statement: `(ID: Int?, Statement)`, for flexibility.
+  - A tuple of the above [`ROWID`][ROWID] and statement: `(rowid: Int64?, statement: Statement)`, for flexibility.
 
     ``` swift
-    let (ID, statement) = users.insert(email <- "alice@mac.com")
-    if let ID = ID {
-        println("inserted id: \(ID)")
+    let (rowid, statement) = users.insert(email <- "alice@mac.com")
+    if let rowid = rowid {
+        println("inserted id: \(rowid)")
     } else if statement.failed {
         println("insertion failed: \(statement.reason)")
     }
@@ -428,10 +472,10 @@ To take an amount and “move” it via transaction, we can use `-=` and `+=`:
 
 ``` swift
 let amount = 100.0
-db.transaction(
-    alice.update(balance -= amount),
-    betty.update(balance += amount)
-)
+db.transaction()
+    && alice.update(balance -= amount)
+    && betty.update(balance += amount)
+    && db.commit() || db.rollback()
 // BEGIN DEFERRED TRANSACTION;
 // UPDATE "users" SET "balance" = "balance" - 100.0 WHERE ("id" = 1);
 // UPDATE "users" SET "balance" = "balance" + 100.0 WHERE ("id" = 2);
@@ -580,7 +624,7 @@ let managers = users.alias("managers")
 
 let query = users.join(managers, on: managers[id] == users[manager_id])
 // SELECT * FROM "users"
-// INNER JOIN "users" AS "managers" ON ("managers"."id" = "users"."manager_id")
+// INNER JOIN ("users") AS "managers" ON ("managers"."id" = "users"."manager_id")
 ```
 
 If query results can have ambiguous column names, row values should be accessed with namespaced [column expressions](#expressions). In the above case, `SELECT *` immediately namespaces all columns of the result set.
@@ -616,9 +660,9 @@ users.filter(verified || balance >= 10_000)
 // SELECT * FROM "users" WHERE ("verified" OR ("balance" >= 10000.0))
 ```
 
-You can build your own boolean expressions by using one of the many [filter operators and functions](#filter-operators-and-functions).
+We can build our own boolean expressions by using one of the many [filter operators and functions](#filter-operators-and-functions).
 
-> _Note:_ SQLite.swift defines `filter` instead of `where` because `where` is [a reserved keyword](https://developer.apple.com/library/ios/documentation/swift/conceptual/Swift_Programming_Language/LexicalStructure.html#//apple_ref/doc/uid/TP40014097-CH30-XID_906).
+> _Note:_ SQLite.swift defines `filter` instead of `where` because `where` is [a reserved keyword](https://developer.apple.com/library/ios/documentation/Swift/Conceptual/Swift_Programming_Language/LexicalStructure.html#//apple_ref/doc/uid/TP40014097-CH30-ID413).
 
 
 ##### Filter Operators and Functions
@@ -727,14 +771,14 @@ users.filter(name != nil).count
   - `max` takes a comparable column expression and returns the largest value if any exists.
 
     ``` swift
-    users.max(id) // -> Int?
+    users.max(id) // -> Int64?
     // SELECT max("id") FROM "users"
     ```
 
   - `min` takes a comparable column expression and returns the smallest value if any exists.
 
     ``` swift
-    users.min(id) // -> Int?
+    users.min(id) // -> Int64?
     // SELECT min("id") FROM "users"
     ```
 
@@ -796,13 +840,9 @@ Like [`insert`](#inserting-rows) (and [`delete`](#updating-rows)), `update` can 
     }
     ```
 
-    We can use the optional nature of the value to disambiguate with a simple `?` or `!`.
+    If a value is always expected, we can disambiguate with a `!`.
 
     ``` swift
-    // ignore failure
-    alice.update(email <- "alice@me.com")?
-
-    // assertion on failure
     alice.update(email <- "alice@me.com")!
     ```
 
@@ -840,13 +880,9 @@ Like [`insert`](#inserting-rows) and [`update`](#updating-rows), `delete` can re
     }
     ```
 
-    We can use the optional nature of the value to disambiguate with a simple `?` or `!`.
+    If a value is always expected, we can disambiguate with a `!`.
 
     ``` swift
-    // ignore failure
-    alice.delete()?
-
-    // assertion on failure
     alice.delete()!
     ```
 
@@ -857,16 +893,26 @@ Like [`insert`](#inserting-rows) and [`update`](#updating-rows), `delete` can re
 
 ## Transactions and Savepoints
 
-Using the `transaction` and `savepoint` functions, we can run a series of statements, commiting the changes to the database if they all succeed. If a single statement fails, we bail out early and roll back.
+Using the `transaction` and `savepoint` functions, we can run a series of statements, committing the changes to the database if they all succeed. If a single statement fails, we can bail out early and roll back.
 
 ``` swift
-db.transaction(
-    users.insert(email <- "betty@icloud.com"),
-    users.insert(email <- "cathy@icloud.com", manager_id <- db.lastID)
-)
+db.transaction()
+    && users.insert(email <- "betty@icloud.com")
+    && users.insert(email <- "cathy@icloud.com", manager_id <- db.lastInsertRowid)
+    && db.commit() || db.rollback()
 ```
 
-> _Note:_ Each statement is captured in an auto-closure and won’t execute till the preceding statement succeeds. This means we can use the `lastID` property on `Database` to reference the previous statement’s insert [`ROWID`][ROWID].
+The former statement can also be written as
+``` swift
+db.transaction { _ in
+    for obj in objects {
+        stmt.run(obj.email)
+    }
+    return .Commit || .Rollback
+}
+```
+
+> _Note:_ Each statement is captured in an auto-closure and won’t execute till the preceding statement succeeds. This means we can use the `lastInsertRowid` property on `Database` to reference the previous statement’s insert [`ROWID`][ROWID].
 
 
 ## Altering the Schema
@@ -916,16 +962,19 @@ The `alter` function shares several of the same [`column` function parameters](#
 
     > _Note:_ Unlike the [`CREATE TABLE` constraint](#table-constraints), default values may not be expression structures (including `CURRENT_TIME`, `CURRENT_DATE`, or `CURRENT_TIMESTAMP`).
 
-<!-- FIXME
   - `collate` adds a `COLLATE` clause to `Expression<String>` (and `Expression<String?>`) column definitions with [a collating sequence](https://www.sqlite.org/datatype3.html#collation) defined in the `Collation` enumeration.
 
     ``` swift
-    t.column(email, collate: .NoCase)
-    // email TEXT NOT NULL COLLATE NOCASE
-    ```
--->
+    t.alter(table: users, add: email, collate: .Nocase)
+    // ALTER TABLE "users"
+    // ADD COLUMN "email" TEXT NOT NULL COLLATE "NOCASE"
 
-  - `references` adds a `REFERENCES` clause to `Int` (and `Int?`) column definitions and accepts a table or namespaced column expression. (See the `foreignKey` function under [Table Constraints](#table-constraints) for non-integer foreign key support.)
+    t.alter(table: users, add: name, collate: .Rtrim)
+    // ALTER TABLE "users"
+    // ADD COLUMN "name" TEXT COLLATE "RTRIM"
+    ```
+
+  - `references` adds a `REFERENCES` clause to `Int64` (and `Int64?`) column definitions and accepts a table or namespaced column expression. (See the `foreignKey` function under [Table Constraints](#table-constraints) for non-integer foreign key support.)
 
     ``` swift
     db.alter(table: posts, add: user_id, references: users[id])
@@ -977,7 +1026,7 @@ db.drop(index: users, on: email)
 // DROP INDEX "index_users_on_email"
 ```
 
-The `drop(table:)` function has one additional parameter, `ifExists`, which (when `true`) adds an `IF EXISTS` clause to the statement.
+The `drop(index:)` function has one additional parameter, `ifExists`, which (when `true`) adds an `IF EXISTS` clause to the statement.
 
 ``` swift
 db.drop(index: users, on: email, ifExists: true)
@@ -1059,8 +1108,9 @@ extension NSDate: Value {
 
 let SQLDateFormatter: NSDateFormatter = {
     let formatter = NSDateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-    formatter.timeZone = NSTimeZone(abbreviation: "UTC")
+    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+    formatter.locale = NSLocale(localeIdentifier: "en_US_POSIX")
+    formatter.timeZone = NSTimeZone(forSecondsFromGMT: 0)
     return formatter
 }()
 ```
@@ -1088,7 +1138,7 @@ Once defined, we can use these types directly in SQLite statements.
 ``` swift
 let published_at = Expression<NSDate>("published_at")
 
-let published = posts.filter(published_at <= Date())
+let published = posts.filter(published_at <= NSDate())
 // extension where Datatype == String:
 //     SELECT * FROM "posts" WHERE "published_at" <= '2014-11-18 12:45:30'
 // extension where Datatype == Int:
@@ -1108,7 +1158,7 @@ extension NSData: Value {
         return Blob.declaredDatatype
     }
     class func fromDatatypeValue(blobValue: Blob) -> Self {
-        return self(bytes: blobValue.bytes, blob: blobValue.length)
+        return self(bytes: blobValue.bytes, length: blobValue.length)
     }
     var datatypeValue: Blob {
         return Blob(bytes: bytes, length: length)
@@ -1226,9 +1276,124 @@ Many of SQLite’s [core functions](https://www.sqlite.org/lang_corefunc.html) h
 Most of SQLite’s [aggregate functions](https://www.sqlite.org/lang_aggfunc.html) have been surfaced in and type-audited for SQLite.swift.
 
 
+## Custom SQL Functions
+
+We can create custom SQL functions by calling `create(function:)` on a database connection.
+
+For example, to give queries access to [`MobileCoreServices.UTTypeConformsTo`](https://developer.apple.com/library/ios/documentation/MobileCoreServices/Reference/UTTypeRef/index.html#//apple_ref/c/func/UTTypeConformsTo), we can write the following:
+
+``` swift
+import MobileCoreServices
+
+let typeConformsTo: (String, Expression<String>) -> Expression<Bool> = (
+    db.create(function: "typeConformsTo", deterministic: true) { UTI, conformsToUTI in
+        return UTTypeConformsTo(UTI, conformsToUTI) != 0
+    }
+)
+```
+
+> _Note:_ The optional `deterministic` parameter is an optimization that causes the function to be created with [`SQLITE_DETERMINISTIC`](https://www.sqlite.org/c3ref/create_function.html).
+
+Note `typeConformsTo`’s signature:
+
+``` swift
+(Expression<String>, String) -> Expression<Bool>
+```
+
+Because of this, `create(function:)` expects a block with the following signature:
+
+``` swift
+(String, String) -> Bool
+```
+
+Once assigned, the closure can be called wherever boolean expressions are accepted.
+
+``` swift
+let attachments = db["attachments"]
+let UTI = Expression<String>("UTI")
+
+attachments.filter(typeConformsTo(UTI, kUTTypeImage))
+// SELECT * FROM "attachments" WHERE "typeConformsTo"("UTI", 'public.image')
+```
+
+> _Note:_ The return type of a function must be [a core SQL type](#building-type-safe-sql) or [conform to `Value`](#custom-types).
+
+We can create loosely-typed functions by handling an array of raw arguments, instead.
+
+``` swift
+db.create(function: "typeConformsTo", deterministic: true) { args in
+    if let UTI = args[0] as? String, conformsToUTI = args[1] as? String {
+        return Int(UTTypeConformsTo(UTI, conformsToUTI))
+    }
+    return nil
+}
+```
+
+Creating a loosely-typed function cannot return a closure and instead must be wrapped manually or executed [using raw SQL](#executing-arbitrary-sql).
+
+``` swift
+let stmt = db.prepare("SELECT * FROM attachments WHERE typeConformsTo(UTI, ?)")
+for row in stmt.bind(kUTTypeImage) { /* ... */ }
+```
+
+
+## Custom Collations
+
+We can create custom collating sequences by calling `create(collation:)` on a database connection.
+
+``` swift
+db.create(collation: "NODIACRITIC") { lhs, rhs in
+    return lhs.compare(rhs, options: .DiacriticInsensitiveSearch)
+}
+```
+
+We can reference a custom collation using the `Custom` member of the `Collation` enumeration.
+
+``` swift
+restaurants.order(collate(.Custom("NODIACRITIC"), name))
+// SELECT * FROM "restaurants" ORDER BY "name" COLLATE "NODIACRITIC"
+```
+
+
+## Full-text Search
+
+We can create a virtual table using the [FTS4 module](http://www.sqlite.org/fts3.html) by calling `create(vtable:)` on a database connection.
+
+``` swift
+let emails = db["emails"]
+let subject = Expression<String>("subject")
+let body = Expression<String>("body")
+
+db.create(vtable: emails, using: fts4(subject, body))
+// CREATE VIRTUAL TABLE "emails" USING fts4("subject", "body")
+```
+
+We can specify a [tokenizer](http://www.sqlite.org/fts3.html#tokenizer) using the `tokenize` parameter.
+
+``` swift
+db.create(vtable: emails, using: fts4([subject, body], tokenize: .Porter))
+// CREATE VIRTUAL TABLE "emails" USING fts4("subject", "body", tokenize=porter)
+```
+
+Once we insert a few rows, we can search using the `match` function, which takes a table or column as its first argument and a query string as its second.
+
+``` swift
+emails.insert(
+    subject <- "Just Checking In",
+    body <- "Hey, I was just wondering...did you get my last email?"
+)!
+
+emails.filter(match(emails, "wonder*"))
+// SELECT * FROM "emails" WHERE "emails" MATCH 'wonder*'
+
+emails.filter(match(subject, "Re:*"))
+// SELECT * FROM "emails" WHERE "subject" MATCH 'Re:*'
+```
+
+
 ## Executing Arbitrary SQL
 
-Though we recommend you stick with SQLite.swift’s type-safe system whenever possible, it is possible to simply and safely prepare and execute raw SQL statements via a `Database` connection using the following functions.
+Though we recommend you stick with SQLite.swift’s [type-safe system](#building-type-safe-sql) whenever possible, it is possible to simply and safely prepare and execute raw SQL statements via a `Database` connection using the following functions.
 
   - `execute` runs an arbitrary number of SQL statements as a convenience.
 
@@ -1261,7 +1426,7 @@ Though we recommend you stick with SQLite.swift’s type-safe system whenever po
 
     ``` swift
     stmt.run("alice@mac.com")
-    db.lastChanges // -> {Some 1}
+    db.changes // -> {Some 1}
     ```
 
     Statements with results may be iterated over.
@@ -1283,14 +1448,14 @@ Though we recommend you stick with SQLite.swift’s type-safe system whenever po
   - `scalar` prepares a single `Statement` object from a SQL string, optionally binds values to it (using the statement’s `bind` function), executes, and returns the first value of the first row.
 
     ``` swift
-    db.scalar("SELECT count(*) FROM users") as Int
+    db.scalar("SELECT count(*) FROM users") as! Int64
     ```
 
     Statements also have a `scalar` function, which can optionally re-bind values at execution.
 
     ``` swift
     let stmt = db.prepare("SELECT count (*) FROM users")
-    stmt.scalar() as Int
+    stmt.scalar() as! Int64
     ```
 
 

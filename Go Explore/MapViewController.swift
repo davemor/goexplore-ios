@@ -63,7 +63,6 @@ class MapViewController: UIViewController, MKMapViewDelegate {
     }
     
     // MARK: - MKMapView Delegate
-    
     func mapView(mapView: MKMapView!, rendererForOverlay overlay: MKOverlay!) -> MKOverlayRenderer! {
         let routes = DataManager.sharedInstance.routes
         let routeId = overlay.title!.toInt()!
@@ -76,4 +75,36 @@ class MapViewController: UIViewController, MKMapViewDelegate {
         lineView.lineWidth = 2
         return lineView
     }
+    
+    // MARK: Map picking code
+    func distanceOfPoint(pt: MKMapPoint, poly: MKPolyline) {
+        
+        let distance = Float.infinity
+        
+        for var n = 0; n < poly.pointCount - 1; n++ {
+            
+        }
+        
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

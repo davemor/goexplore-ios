@@ -38,7 +38,7 @@ class LogbooViewController  : UICollectionViewController, UICollectionViewDelega
     
     override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
         
-        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath:indexPath) as LogbookCell
+        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath:indexPath) as! LogbookCell
         
         let wildlifeId = Array(DataManager.sharedInstance.logEntriesTable.keys)[indexPath.row]
         let wl = DataManager.sharedInstance.wildlifeTable[wildlifeId]!
@@ -54,9 +54,9 @@ class LogbooViewController  : UICollectionViewController, UICollectionViewDelega
     }
     
     // MARK: UICollectionViewDelegateFlowLayout
-    func collectionView(collectionView: UICollectionView!,
-        layout collectionViewLayout: UICollectionViewLayout!,
-        sizeForItemAtIndexPath indexPath: NSIndexPath!) -> CGSize {
+    func collectionView(collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
             
             let width = collectionView.frame.width / 2 - 15
             return CGSize(width: width, height: 170)
@@ -73,8 +73,8 @@ class LogbooViewController  : UICollectionViewController, UICollectionViewDelega
     }
     
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        let dest = segue.destinationViewController as LogBookDetailTableViewController
-        let cell = sender as LogbookCell
+        let dest = segue.destinationViewController as! LogBookDetailTableViewController
+        let cell = sender as! LogbookCell
         dest.wildlifeId = cell.wl?.id
     }
 }

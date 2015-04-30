@@ -111,7 +111,7 @@ class NewLogEntryViewController: UITableViewController, UIPickerViewDelegate, UI
     // MARK: - Navigation
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         if segue.identifier == "LocationPickerSegue" {
-            var dest = segue.destinationViewController as LocationPickerViewController
+            var dest = segue.destinationViewController as! LocationPickerViewController
             // if location != nil {
                 dest.location = location// ! // if we already have a location set it on the picker
             // }
@@ -209,17 +209,17 @@ class NewLogEntryViewController: UITableViewController, UIPickerViewDelegate, UI
     }
     
     // MARK - Location Picker Delegate
-    func setLocation(location: CLLocationCoordinate2D) {
+    func setALocation(location: CLLocationCoordinate2D) {
         self.location = location
         // locationLabel.text = "\(location.latitude), \(location.longitude)"
     }
-    func setPlacemark(placemark: CLPlacemark) {
+    func setAPlacemark(placemark: CLPlacemark) {
         self.placemark = placemark
         locationLabel.text = "\(placemark.locality)"
     }
     
     // MARK - ImagePickerDelegate
-    func imagePickerController(picker: UIImagePickerController!, didFinishPickingImage image: UIImage!, editingInfo: [NSObject : AnyObject]!) {
+    func imagePickerController(picker: UIImagePickerController, didFinishPickingImage image: UIImage!, editingInfo: [NSObject : AnyObject]!) {
         
         // set up the view
         imageView.image = image
@@ -238,7 +238,7 @@ class NewLogEntryViewController: UITableViewController, UIPickerViewDelegate, UI
         // save the image to our local directory so the app can get it back
         let pngData = UIImagePNGRepresentation(image);
         let paths = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)
-        let documentsPath = paths[0] as String
+        let documentsPath = paths[0] as! String
         imageFileName = documentsPath.stringByAppendingPathComponent(imageFileName) + ".png"
         pngData.writeToFile(imageFileName, atomically: true)
         

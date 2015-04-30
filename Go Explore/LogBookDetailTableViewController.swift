@@ -54,7 +54,7 @@ class LogBookDetailTableViewController: UITableViewController {
 
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         
-        var cell = tableView.dequeueReusableCellWithIdentifier(ReuseIdentifier, forIndexPath: indexPath) as LogDetailTableViewCell
+        var cell = tableView.dequeueReusableCellWithIdentifier(ReuseIdentifier, forIndexPath: indexPath) as! LogDetailTableViewCell
 
         if let logs = DataManager.sharedInstance.logEntriesTable[wildlifeId!] {
             let log = logs[indexPath.row]
@@ -76,7 +76,7 @@ class LogBookDetailTableViewController: UITableViewController {
         if headerOpt == nil {
             headerOpt = NSBundle.mainBundle().loadNibNamed("LogbookDetailHeader", owner: self, options: nil)[0]
         }
-        let header = headerOpt as LogbookDetailHeaderView
+        let header = headerOpt as! LogbookDetailHeaderView
         let imageName = DataManager.sharedInstance.wildlifeTable[wildlifeId!]?.imageName
         header.image.image = UIImage(named: imageName!)
         return header
@@ -90,8 +90,8 @@ class LogBookDetailTableViewController: UITableViewController {
         // Pass the selected object to the new view controller.
         
         if segue.identifier == "ShowLogEntryDetails" {
-            let cell = sender as LogDetailTableViewCell
-            let dest = segue.destinationViewController as LogEntryDetailViewController
+            let cell = sender as! LogDetailTableViewCell
+            let dest = segue.destinationViewController as! LogEntryDetailViewController
             dest.logEntry = cell.logEntry
             
         }

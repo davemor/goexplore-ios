@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0610"
+   LastUpgradeVersion = "0630"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -14,9 +14,23 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "2E8CE8EA194ECF29008B9919"
+               BlueprintIdentifier = "24D9BBE51AC54B30000FDBB8"
                BuildableName = "ExSwift.framework"
                BlueprintName = "ExSwift-iOS"
+               ReferencedContainer = "container:ExSwift.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "24D9BBEF1AC54B31000FDBB8"
+               BuildableName = "ExSwiftTests.xctest"
+               BlueprintName = "ExSwiftTests-iOS"
                ReferencedContainer = "container:ExSwift.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,9 +46,9 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "2EC02FBC194ED0D500619CB5"
-               BuildableName = "ExSwift-iOS Tests.xctest"
-               BlueprintName = "ExSwift-iOS Tests"
+               BlueprintIdentifier = "24D9BBEF1AC54B31000FDBB8"
+               BuildableName = "ExSwiftTests.xctest"
+               BlueprintName = "ExSwiftTests-iOS"
                ReferencedContainer = "container:ExSwift.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -42,7 +56,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2E8CE8EA194ECF29008B9919"
+            BlueprintIdentifier = "24D9BBE51AC54B30000FDBB8"
             BuildableName = "ExSwift.framework"
             BlueprintName = "ExSwift-iOS"
             ReferencedContainer = "container:ExSwift.xcodeproj">
@@ -61,7 +75,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2E8CE8EA194ECF29008B9919"
+            BlueprintIdentifier = "24D9BBE51AC54B30000FDBB8"
             BuildableName = "ExSwift.framework"
             BlueprintName = "ExSwift-iOS"
             ReferencedContainer = "container:ExSwift.xcodeproj">
@@ -79,7 +93,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2E8CE8EA194ECF29008B9919"
+            BlueprintIdentifier = "24D9BBE51AC54B30000FDBB8"
             BuildableName = "ExSwift.framework"
             BlueprintName = "ExSwift-iOS"
             ReferencedContainer = "container:ExSwift.xcodeproj">

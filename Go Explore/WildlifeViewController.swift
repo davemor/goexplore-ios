@@ -36,7 +36,7 @@ class WildlifeViewController  : UICollectionViewController, UICollectionViewDele
     }
     
     override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath:indexPath) as WildlifeCell
+        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath:indexPath) as! WildlifeCell
         let wl = wildlifeList[indexPath.row]
         
         cell.image.image = UIImage(named: wl.imageName)
@@ -65,8 +65,8 @@ class WildlifeViewController  : UICollectionViewController, UICollectionViewDele
     }
     
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        let dest = segue.destinationViewController as WildlifeDetailViewController
-        let cell = sender as WildlifeCell
+        let dest = segue.destinationViewController as! WildlifeDetailViewController
+        let cell = sender as! WildlifeCell
         //dest.wildlifeId = wl.id
         dest.wildlifeOpt = cell.wl
     }

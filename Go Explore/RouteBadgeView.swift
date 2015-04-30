@@ -24,7 +24,7 @@ class RouteBadgeView: UIView {
         
     }
     
-    func addRowOfButtons(subRoutes: Slice<(route: Int, area: Int)>, yPos: Float, vc: WildlifeDetailViewController) {
+    func addRowOfButtons(subRoutes: ArraySlice<(route: Int, area: Int)>, yPos: Float, vc: WildlifeDetailViewController) {
 
         
         let buttonWidth: Float = 48.0

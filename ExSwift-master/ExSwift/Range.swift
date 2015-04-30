@@ -41,22 +41,6 @@ internal extension Range {
         }
     }
 
-    /**
-        Range of Int with random bounds between from and to (inclusive).
-        
-        :param: from Lower bound
-        :param: to Upper bound
-        :returns: Random range
-    */
-    static func random (from: Int, to: Int) -> Range<Int> {
-        
-        let lowerBound = Int.random(min: from, max: to)
-        let upperBound = Int.random(min: lowerBound, max: to)
-        
-        return lowerBound...upperBound
-
-    }
-
 	/**
 		Returns each element of the range in an array
 	
@@ -69,6 +53,21 @@ internal extension Range {
         }
         return result
     }
+
+    /**
+        Range of Int with random bounds between from and to (inclusive).
+    
+        :param: from Lower bound
+        :param: to Upper bound
+        :returns: Random range
+    */
+    static func random (from: Int, to: Int) -> Range<Int> {
+        let lowerBound = Int.random(min: from, max: to)
+        let upperBound = Int.random(min: lowerBound, max: to)
+        
+        return lowerBound...upperBound
+    }
+
 }
 
 /**
@@ -87,3 +86,6 @@ public func .. <U : Comparable> (first: U, second: U) -> HalfOpenInterval<U> {
     return first..<second
 }
 
+public func .. <Pos : ForwardIndexType> (minimum: Pos, maximum: Pos) -> Range<Pos> {
+    return minimum..<maximum
+}
